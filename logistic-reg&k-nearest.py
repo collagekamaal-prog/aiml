@@ -1,73 +1,60 @@
-import pandas as ps
+import pandas as pd
 import numpy as np
-from sklearn.datasets import fetch_california_housing
+
+import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import mean_absolute_error as mae
-from sklearn.metrics import mean_squared_error as mse
-from sklearn.metrics import accuracy_score, f1_score
-import matplotlib.pyplot as plt
-
-from sklearn.neighbors import KNeighborsClassifier
-
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 data = fetch_california_housing(as_frame=True)
 df = data.frame
 
 x = df.drop(columns=["MedHouseVal"])
-continuous_y = df["MedHouseVal"]
+y_continuous = df["MedHouseVal"]
 
-median_price = continuous_y.median()
-y = (continuous_y > median_price).astype(int)
+price_median = y_continuous.median()
+y = (y_continuous > price_median).astype(int)
 
-#---------------------------------------
-#train test split
-
-x_train, x_test, y_train, y_test = train_test_split(x,y, test_size=0.20, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(
+    x, y, random_state=42, test_size=0.20
+)
 
 scaler = StandardScaler()
+x_train_scaled = scaler.fit_transform(x_train)
+x_test_scaled = scaler.transform(x_test)
 
-x_train_scaler = scaler.fit_transform(x_train)
-x_test_scaler = scaler.transform(x_test)
+lg_model = LogisticRegression(max_iter=1000)
+lg_model.fit(x_train_scaled, y_train)
+lg_pred_y = lg_model.predict(x_test_scaled)
 
-#---------------------------------------
-#logistic regretion 
-lg_model = LogisticRegression()
-lg_model.fit(x_train_scaler, y_train)
+print("Logistic Regression")
+print("Accuracy:", accuracy_score(y_test, lg_pred_y))
+print("Precision:", precision_score(y_test, lg_pred_y))
+print("Recall:", recall_score(y_test, lg_pred_y))
+print("F1 Score:", f1_score(y_test, lg_pred_y))
+print("Confusion Matrix:\n", confusion_matrix(y_test, lg_pred_y))
 
-predict_y_lg = lg_model.predict(x_test_scaler)
+knn = KNeighborsClassifier(n_neighbors=5)
+knn.fit(x_train_scaled, y_train)
+knn_pred_y = knn.predict(x_test_scaled)
 
-lg_mse = mse(y_test, predict_y_lg)
-lg_mae = mae(y_test, predict_y_lg)
-lg_f1 = f1_score(y_test, predict_y_lg)
-lg_accuracy_score = accuracy_score(y_test, predict_y_lg)
+print("\nK-Nearest Neighbors")
+print("Accuracy:", accuracy_score(y_test, knn_pred_y))
+print("Precision:", precision_score(y_test, knn_pred_y))
+print("Recall:", recall_score(y_test, knn_pred_y))
+print("F1 Score:", f1_score(y_test, knn_pred_y))
+print("Confusion Matrix:\n", confusion_matrix(y_test, knn_pred_y))
 
-print("lg MSE=", lg_mse)
-print("lg MAE=", lg_mae)
-print("lg F1", lg_f1)
-print("lg accuacy= ", lg_accuracy_score)
-
-
-
-#---------------------------------------------
-
-knn_model = KNeighborsClassifier(n_neighbors=5)
-knn_model.fit(x_train_scaler,y_train)
-
-predict_y_knn = knn_model.predict(x_test_scaler)
-
-knn_mse = mse(y_test, predict_y_knn)
-knn_mae = mae(y_test, predict_y_knn)
-
-knn_f1 = f1_score(y_test, predict_y_knn)
-knn_accuracy_score = accuracy_score(y_test, predict_y_knn)
-
-print("knn MSE= ", knn_mse)
-print("knn MAE= ", knn_mae)
-print("knn F1= ", knn_f1)
-print("knn accuacy= ", knn_accuracy_score)
-#-----------------------------------------------
-
-plt.bar(['Logistic Regression', 'KNN'], [accuracy_score(y_test, predict_y_lg), accuracy_score(y_test, predict_y_knn)], color=['blue', 'orange'])
+cm = confusion_matrix(y_test, lg_pred_y)
+plt.imshow(cm, cmap="Blues")
+for i in range(2):
+    for j in range(2):
+        plt.text(j, i, cm[i, j], ha="center", va="center")
+plt.xlabel("Predicted")
+plt.ylabel("Actual")
+plt.title("Logistic Regression Confusion Matrix")
+plt.colorbar()
 plt.show()
